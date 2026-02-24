@@ -35,6 +35,12 @@ public class LessonService {
         return lessonRepository.save(lesson);
     }
 
+    public long countCourseLessons(Long courseId) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new IllegalArgumentException("Course not found: " + courseId));
+        return lessonRepository.countByCourse(course);
+    }
+
     public Lesson getLessonById(Long id) {
         return lessonRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Lesson not found: " + id));

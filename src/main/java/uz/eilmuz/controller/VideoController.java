@@ -75,6 +75,7 @@ public class VideoController {
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(contentType))
                 .header(HttpHeaders.CONTENT_DISPOSITION, "inline")
+                .header(HttpHeaders.ACCEPT_RANGES, "bytes")
                 .contentLength(fileLength)
                 .body(resource);
     }

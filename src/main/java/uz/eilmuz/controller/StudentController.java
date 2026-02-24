@@ -34,9 +34,15 @@ public class StudentController {
         User student = userService.findByEmail(userDetails.getUsername());
         var enrollments = enrollmentService.getStudentEnrollments(student);
         var approvedCourses = courseService.getApprovedCourses();
+        var lessonCountMap = new HashMap<Long, Long>();
+        for (var enrollment : enrollments) {
+            Long courseId = enrollment.getCourse().getId();
+            lessonCountMap.put(courseId, lessonService.countCourseLessons(courseId));
+        }
         model.addAttribute("enrollments", enrollments);
         model.addAttribute("approvedCourses", approvedCourses);
         model.addAttribute("student", student);
+        model.addAttribute("lessonCountMap", lessonCountMap);
         return "student/dashboard";
     }
 

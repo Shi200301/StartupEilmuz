@@ -14,10 +14,12 @@
             width: 100%;
             max-width: 960px;
             background: #000;
+            min-height: 200px;
         }
         #mainVideo {
             width: 100%;
             display: block;
+            min-height: 200px;
         }
         #wm-canvas {
             position: absolute;
@@ -42,7 +44,12 @@
 </nav>
 <div class="container-fluid mt-3">
     <div class="text-center">
-        <div id="video-wrapper">
+        <!-- No video uploaded for this lesson -->
+        <div th:if="${lesson.videoPath == null}" class="alert alert-warning mx-auto" style="max-width:960px;">
+            <i class="bi bi-exclamation-triangle me-2"></i>Bu dars uchun video hali yuklanmagan.
+        </div>
+        <!-- Video player (only rendered when a file exists) -->
+        <div id="video-wrapper" th:if="${lesson.videoPath != null}">
             <video id="mainVideo" controls controlsList="nodownload" oncontextmenu="return false;"
                    th:src="@{'/video/stream/' + ${lesson.id}}" preload="metadata">
                 Your browser does not support the video tag.
@@ -129,8 +136,12 @@
         if (!_cnv) return;
         var video = document.getElementById('mainVideo');
         if (video) {
-            _cnv.width = video.offsetWidth || video.clientWidth || 640;
-            _cnv.height = video.offsetHeight || video.clientHeight || 360;
+            var w = video.offsetWidth || video.clientWidth || 640;
+            var h = video.offsetHeight || video.clientHeight || 0;
+            if (h < 10) h = Math.round(w * 9 / 16); // fallback 16:9
+            if (h < 10) h = 360;
+            _cnv.width = w;
+            _cnv.height = h;
             _initPositions(_cnv.width, _cnv.height);
         }
     }
