@@ -31,8 +31,8 @@ public class WatermarkService {
 
     private String buildDisplayText(User student) {
         String firstName = student.getFirstName() != null ? student.getFirstName() : "";
-        String lastInitial = (student.getLastName() != null && !student.getLastName().isEmpty())
-                ? student.getLastName().substring(0, 1) + "." : "";
+        String lastInitial = (student.getLastName() != null && student.getLastName().length() > 0)
+                ? student.getLastName().charAt(0) + "." : "";
         String email = student.getEmail();
         String maskedEmail = maskEmail(email);
         return firstName + " " + lastInitial + " " + maskedEmail;

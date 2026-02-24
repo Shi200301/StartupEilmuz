@@ -23,6 +23,8 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class VideoController {
 
+    private static final long VIDEO_CHUNK_SIZE = 1024 * 1024; // 1MB
+
     private final LessonService lessonService;
     private final EnrollmentService enrollmentService;
     private final UserService userService;
@@ -81,7 +83,7 @@ public class VideoController {
         long start = Long.parseLong(rangeParts[0]);
         long end = rangeParts.length > 1 && !rangeParts[1].isEmpty()
                 ? Long.parseLong(rangeParts[1])
-                : Math.min(start + 1024 * 1024 - 1, fileLength - 1);
+                : Math.min(start + VIDEO_CHUNK_SIZE - 1, fileLength - 1);
 
         long contentLength = end - start + 1;
         HttpHeaders headers = new HttpHeaders();

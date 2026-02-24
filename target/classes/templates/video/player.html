@@ -154,10 +154,13 @@
     function _lockCanvas() {
         if (!_cnv) return;
         try {
-            Object.defineProperty(_cnv, 'style', {
-                get: function() { return _cnv._style || (_cnv._style = _cnv.__proto__.__lookupGetter__('style').call(_cnv)); },
-                set: function() {}
-            });
+            var desc = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'style');
+            if (desc) {
+                Object.defineProperty(_cnv, 'style', {
+                    get: desc.get ? desc.get.bind(_cnv) : function() { return _cnv._style; },
+                    set: function() {}
+                });
+            }
         } catch(e) {}
     }
 
