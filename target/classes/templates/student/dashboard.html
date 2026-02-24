@@ -7,8 +7,8 @@
 <h2 class="mb-4"><i class="bi bi-person-video3 me-2"></i>Welcome, <span th:text="${student.firstName}"></span>!</h2>
 <h4 class="mb-3">My Enrolled Courses</h4>
 <div th:if="${#lists.isEmpty(enrollments)}" class="alert alert-info">You haven't enrolled in any courses yet. <a th:href="@{/student/courses}">Browse courses</a></div>
-<div class="row" th:each="enrollment : ${enrollments}">
-    <div class="col-md-4 mb-3">
+<div class="row">
+<div class="col-md-4 mb-3" th:each="enrollment : ${enrollments}">
         <div class="card h-100">
             <img th:if="${enrollment.course.thumbnailPath != null}"
                  th:src="@{'/uploads/' + ${enrollment.course.thumbnailPath}}"
@@ -26,8 +26,8 @@
     <h4>Available Courses</h4>
     <a th:href="@{/student/courses}" class="btn btn-outline-primary btn-sm">Browse All</a>
 </div>
-<div class="row" th:each="course : ${approvedCourses}">
-    <div class="col-md-4 mb-3">
+<div class="row">
+<div class="col-md-4 mb-3" th:each="course : ${approvedCourses}">
         <div class="card h-100">
             <img th:if="${course.thumbnailPath != null}"
                  th:src="@{'/uploads/' + ${course.thumbnailPath}}"

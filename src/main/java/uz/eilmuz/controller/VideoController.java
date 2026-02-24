@@ -2,6 +2,7 @@ package uz.eilmuz.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -15,6 +16,8 @@ import uz.eilmuz.model.Watermark;
 import uz.eilmuz.service.*;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.RandomAccessFile;
 import java.nio.file.Path;
 import java.util.Map;
 
@@ -92,9 +95,37 @@ public class VideoController {
         headers.setContentType(MediaType.parseMediaType(contentType));
         headers.setContentLength(contentLength);
 
+        @SuppressWarnings("resource")
+        RandomAccessFile raf = new RandomAccessFile(resource.getFile(), "r");
+        raf.seek(start);
+        InputStream slicedStream = new InputStream() {
+            long remaining = contentLength;
+
+            @Override
+            public int read() throws IOException {
+                if (remaining <= 0) return -1;
+                remaining--;
+                return raf.read();
+            }
+
+            @Override
+            public int read(byte[] b, int off, int len) throws IOException {
+                if (remaining <= 0) return -1;
+                int toRead = (int) Math.min(len, remaining);
+                int bytesRead = raf.read(b, off, toRead);
+                if (bytesRead > 0) remaining -= bytesRead;
+                return bytesRead;
+            }
+
+            @Override
+            public void close() throws IOException {
+                raf.close();
+            }
+        };
+
         return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT)
                 .headers(headers)
-                .body(resource);
+                .body(new InputStreamResource(slicedStream));
     }
 
     private String determineContentType(String path) {

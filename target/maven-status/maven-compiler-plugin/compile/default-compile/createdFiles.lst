@@ -19,6 +19,7 @@ uz/eilmuz/controller/AuthController.class
 uz/eilmuz/EilmuzApplication.class
 uz/eilmuz/repository/WatermarkRepository.class
 uz/eilmuz/model/Watermark$WatermarkBuilder.class
+uz/eilmuz/controller/VideoController$1.class
 uz/eilmuz/service/FileStorageService.class
 uz/eilmuz/controller/AdminController.class
 uz/eilmuz/model/Enrollment$EnrollmentBuilder.class
