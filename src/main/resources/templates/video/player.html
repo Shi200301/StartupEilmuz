@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${lesson.title + ' - Eilmuz'}">Video Player</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body { background: #0d0d0d; color: #fff; }
+        #video-wrapper {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+            max-width: 960px;
+            background: #000;
+            min-height: 200px;
+        }
+        #mainVideo {
+            width: 100%;
+            display: block;
+            min-height: 200px;
+        }
+        #wm-canvas {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 9999;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .video-info { max-width: 960px; margin: 0 auto; }
+    </style>
+</head>
+<body>
+<nav class="navbar navbar-dark bg-dark">
+    <div class="container">
+        <a class="navbar-brand" href="/student/dashboard"><i class="bi bi-mortarboard-fill me-2"></i>Eilmuz</a>
+        <a th:href="@{'/student/courses/' + ${course.id}}" class="btn btn-outline-light btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>Back to Course
+        </a>
+    </div>
+</nav>
+<div class="container-fluid mt-3">
+    <div class="text-center">
+        <!-- No video uploaded for this lesson -->
+        <div th:if="${lesson.videoPath == null}" class="alert alert-warning mx-auto" style="max-width:960px;">
+            <i class="bi bi-exclamation-triangle me-2"></i>Bu dars uchun video hali yuklanmagan.
+        </div>
+        <!-- Video player (only rendered when a file exists) -->
+        <div id="video-wrapper" th:if="${lesson.videoPath != null}">
+            <video id="mainVideo" controls controlsList="nodownload" oncontextmenu="return false;"
+                   th:src="@{'/video/stream/' + ${lesson.id}}" preload="metadata">
+                Your browser does not support the video tag.
+            </video>
+            <canvas id="wm-canvas"></canvas>
+        </div>
+    </div>
+    <div class="video-info mt-3 mx-auto">
+        <h4 th:text="${lesson.title}"></h4>
+        <p class="text-muted" th:text="${lesson.description}"></p>
+    </div>
+</div>
+<script>
+(function() {
+    'use strict';
+    var _wmt = null;
+    var _cnv = null;
+    var _ctx = null;
+    var _positions = [];
+    var _animFrame = null;
+    var _opacity = 0.35;
+    var _opDir = 1;
+    var _observer = null;
+    var _wrapper = null;
+
+    function _fetchWatermark(cb) {
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', '/video/watermark', true);
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState === 4 && xhr.status === 200) {
+                try { cb(JSON.parse(xhr.responseText)); } catch(e) {}
+            }
+        };
+        xhr.send();
+    }
+
+    function _rnd(min, max) { return Math.random() * (max - min) + min; }
+
+    function _initPositions(w, h) {
+        _positions = [];
+        var count = 4;
+        for (var i = 0; i < count; i++) {
+            _positions.push({
+                x: _rnd(50, w - 150),
+                y: _rnd(30, h - 30),
+                dx: _rnd(-0.4, 0.4),
+                dy: _rnd(-0.3, 0.3),
+                rot: _rnd(-0.3, 0.3),
+                fontSize: Math.floor(_rnd(13, 19))
+            });
+        }
+    }
+
+    function _drawWatermark() {
+        if (!_cnv || !_ctx || !_wmt) return;
+        var w = _cnv.width, h = _cnv.height;
+        _ctx.clearRect(0, 0, w, h);
+
+        _opacity += 0.003 * _opDir;
+        if (_opacity > 0.55) _opDir = -1;
+        if (_opacity < 0.18) _opDir = 1;
+
+        for (var i = 0; i < _positions.length; i++) {
+            var p = _positions[i];
+            p.x += p.dx;
+            p.y += p.dy;
+            if (p.x < 20 || p.x > w - 160) p.dx *= -1;
+            if (p.y < 20 || p.y > h - 10) p.dy *= -1;
+
+            _ctx.save();
+            _ctx.translate(p.x, p.y);
+            _ctx.rotate(p.rot);
+            _ctx.font = 'bold ' + p.fontSize + 'px Arial';
+            _ctx.fillStyle = 'rgba(255,255,255,' + _opacity + ')';
+            _ctx.shadowColor = 'rgba(0,0,0,' + (_opacity * 1.5) + ')';
+            _ctx.shadowBlur = 4;
+            _ctx.fillText(_wmt.text, 0, 0);
+            _ctx.restore();
+        }
+        _animFrame = requestAnimationFrame(_drawWatermark);
+    }
+
+    function _resizeCanvas() {
+        if (!_cnv) return;
+        var video = document.getElementById('mainVideo');
+        if (video) {
+            var w = video.offsetWidth || video.clientWidth || 640;
+            var h = video.offsetHeight || video.clientHeight || 0;
+            if (h < 10) h = Math.round(w * 9 / 16); // fallback 16:9
+            if (h < 10) h = 360;
+            _cnv.width = w;
+            _cnv.height = h;
+            _initPositions(_cnv.width, _cnv.height);
+        }
+    }
+
+    function _attachCanvas() {
+        _wrapper = document.getElementById('video-wrapper');
+        if (!_wrapper) return;
+        var existing = document.getElementById('wm-canvas');
+        if (!existing) {
+            var c = document.createElement('canvas');
+            c.id = 'wm-canvas';
+            c.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;user-select:none;';
+            _wrapper.appendChild(c);
+        }
+        _cnv = document.getElementById('wm-canvas');
+        _ctx = _cnv ? _cnv.getContext('2d') : null;
+        _resizeCanvas();
+    }
+
+    function _lockCanvas() {
+        if (!_cnv) return;
+        try {
+            var desc = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'style');
+            if (desc) {
+                Object.defineProperty(_cnv, 'style', {
+                    get: desc.get ? desc.get.bind(_cnv) : function() { return _cnv._style; },
+                    set: function() {}
+                });
+            }
+        } catch(e) {}
+    }
+
+    function _startObserver() {
+        if (_observer) { try { _observer.disconnect(); } catch(e){} }
+        _observer = new MutationObserver(function(mutations) {
+            var needsReattach = false;
+            for (var i = 0; i < mutations.length; i++) {
+                var m = mutations[i];
+                if (m.type === 'childList') {
+                    for (var j = 0; j < m.removedNodes.length; j++) {
+                        var node = m.removedNodes[j];
+                        if (node.id === 'wm-canvas' || (node.contains && node.contains(document.getElementById('wm-canvas')))) {
+                            needsReattach = true;
+                        }
+                    }
+                }
+                if (m.type === 'attributes' && m.target.id === 'wm-canvas') {
+                    if (m.attributeName === 'style' || m.attributeName === 'class') {
+                        m.target.style.display = '';
+                        m.target.style.visibility = 'visible';
+                        m.target.style.opacity = '1';
+                        m.target.style.zIndex = '9999';
+                    }
+                }
+            }
+            if (needsReattach) {
+                setTimeout(function() {
+                    _attachCanvas();
+                    _lockCanvas();
+                    if (_animFrame) cancelAnimationFrame(_animFrame);
+                    _drawWatermark();
+                }, 50);
+            }
+        });
+        var target = _wrapper || document.body;
+        _observer.observe(target, { childList: true, subtree: true, attributes: true, attributeFilter: ['style','class'] });
+    }
+
+    function _periodicCheck() {
+        var c = document.getElementById('wm-canvas');
+        if (!c || c.style.display === 'none' || c.style.visibility === 'hidden' || parseFloat(c.style.opacity) < 0.01) {
+            _attachCanvas();
+            if (c) {
+                c.style.display = '';
+                c.style.visibility = 'visible';
+                c.style.opacity = '1';
+                c.style.zIndex = '9999';
+            }
+        }
+        if (!_animFrame) _drawWatermark();
+    }
+
+    function _init() {
+        _attachCanvas();
+        _lockCanvas();
+        _startObserver();
+        window.addEventListener('resize', _resizeCanvas);
+        var video = document.getElementById('mainVideo');
+        if (video) {
+            video.addEventListener('loadedmetadata', _resizeCanvas);
+        }
+        _fetchWatermark(function(data) {
+            _wmt = data;
+            _resizeCanvas();
+            _drawWatermark();
+        });
+        setInterval(_periodicCheck, 1000);
+        setInterval(function() {
+            _resizeCanvas();
+        }, 5000);
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', _init);
+    } else {
+        _init();
+    }
+})();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
